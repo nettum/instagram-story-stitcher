@@ -6,9 +6,7 @@ from glob import glob
 from time import time
 import subprocess
 
-
-def main():
-    startTime = time()
+def getVideoStoriesFromJsonFiles():
     combinedJsonData = []
 
     for jsonFile in glob('json/*.json'):
@@ -21,6 +19,9 @@ def main():
         file.close()
         
     stories = sorted(combinedJsonData, key=lambda item:item['taken_at'])
+    return stories
+
+def generateFfmpegInputFiles(stories):
     lastStoryTS = 0
 
     for story in stories:
@@ -34,16 +35,24 @@ def main():
         tmpFile = open('out/' + key + '.tmp', 'a')
         tmpFile.write('file ' + getcwd() + '/' + story['path'] + '\n')
         lastStoryTS = storyTS
-    
-    numStories = 0
-    print('\n\nGenerating stories\n\n')
 
+def convertVideoFilesToStories():
+    numStories = 0
     for file in glob('out/*.tmp'):
         storyFilename = file.replace('tmp', 'mp4')
         print('Generating story %s...' % (storyFilename))
         subprocess.call(['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-f', 'concat', '-safe', '0', '-i', file, '-c', 'copy', storyFilename ])
         remove(file)
         numStories += 1
+    return numStories
+
+def main():
+    startTime = time()
+    print('\n\nGenerating stories\n\n')
+
+    stories = getVideoStoriesFromJsonFiles()
+    generateFfmpegInputFiles(stories)
+    numStories = convertVideoFilesToStories()
 
     endTime = time()
     timeTaken = endTime - startTime
